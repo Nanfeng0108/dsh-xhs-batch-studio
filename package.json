@@ -1,6 +1,6 @@
 {
   "name": "dsh-xhs-batch-studio",
-  "version": "3.6.6",
+  "version": "3.6.7",
   "description": "把资料（Excel / PDF / Word）批量变成小红书图文：提炼选题、写文案、按模板出封面与内页图、导出索引表。DSH 工作台插件。",
   "license": "MIT",
   "author": "local",

@@ -189,7 +189,9 @@ export function apply(ctx, config) {
 
   async function currentPython() {
     if (envPython) return envPython
-    for (const candidate of [config?.python, process.env.XHS_PYTHON, venvPython, 'python3'].filter(Boolean)) {
+    // Windows 上通常没有 python3 这个名字，多给几个候选
+    const fallback = process.platform === 'win32' ? ['python', 'py', 'python3'] : ['python3', 'python']
+    for (const candidate of [config?.python, process.env.XHS_PYTHON, venvPython, ...fallback].filter(Boolean)) {
       if (await probePython(candidate)) {
         envPython = candidate
         return candidate
