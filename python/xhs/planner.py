@@ -281,7 +281,7 @@ def fallback_plans(sheets: list[Sheet]) -> list[dict]:
         lines += ["", "图里放了几张预览，都能在包里找到。", "", "需要的话评论区扣「考勤」，我私信发你。",
                   "不收费，也别拿去卖，整理一次挺费时间的。", "",
                   "#HR #考勤表 #人事行政 #Excel模板 #行政 #职场干货"]
-        plans.append(validate({
+        validated = validate({
             "name": name,
             "audience": audience,
             "title": title,
@@ -292,7 +292,9 @@ def fallback_plans(sheets: list[Sheet]) -> list[dict]:
             "previews": [dict(item) for item in previews],
             "keyword": "考勤",
             "caption": "\n".join(lines),
-        }, "自动 公式", []))
+        }, "自动 公式", [])
+        validated["categories"] = categories
+        plans.append(validated)
     return plans
 
 
