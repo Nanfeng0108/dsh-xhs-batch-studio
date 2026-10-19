@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from . import llm
-from .pack import Sheet, pack_features, parse_pack
+from .pack import Sheet, parse_pack
 
 from .prompts import VOICE
 
@@ -197,8 +197,66 @@ def validate(plan: dict, facts: str, fringe: list[str] | None = None) -> dict:
     return plan
 
 
+def _data_plans(sheets: list[Sheet]) -> list[dict]:
+    """非考勤资料的兜底：只描述资料里真实存在的表和列，不编业务。"""
+    from .pack import data_previews
+
+    categories = [
+        {
+            "name": (sheet.title or sheet.label)[:12],
+            "desc": f"{len(sheet.rows)} 行 · {len(sheet.header)} 列",
+        }
+        for sheet in sheets[:5]
+    ]
+    first = sheets[0]
+    label = (first.title or first.label).strip() or "这份表"
+    cols = [cell.strip() for cell in first.header if cell.strip()][:4]
+    cleaned = re.sub(r"(表|清单|模板|记录|统计)$", "", label).strip()
+    keyword = cleaned if 2 <= len(cleaned) <= 4 else "表格"
+    col_line = f"表头是 {' / '.join(cols)}。" if cols else ""
+
+    seeds = [
+        ("整理好了", "自己用 / 发给朋友", f"{label[:9]}\n我整理好了"),
+        ("照着改", "第一次用的人", f"{label[:9]}\n照着改就行"),
+        ("一份就够", "想省时间的人", "这份表\n一份就够"),
+    ]
+    plans = []
+    for name, audience, title in seeds:
+        lines = [title.replace("\n", ""), ""]
+        lines.append(f"这份{label}整理了一阵，直接拿去用就行。")
+        lines.append("")
+        lines.append(f"里面有 {len(sheets)} 个表：")
+        for item in categories:
+            lines.append(f"· {item['name']}：{item['desc']}")
+        lines += ["", col_line, "", "图里放的就是原表，不是效果图。", "",
+                  f"需要的话评论区扣「{keyword}」，我私信发你。",
+                  "不收费，也别拿去卖，整理一次挺费时间的。", "",
+                  f"#{keyword} #表格模板 #效率工具"]
+        validated = validate({
+            "name": name,
+            "audience": audience,
+            "title": title,
+            "highlight": "",
+            "sub": "表头和数据都在\n改成自己的就能用",
+            "stickers": ["可直接编辑", "源文件都在"],
+            "categories": categories,
+            "previews": data_previews(sheets),
+            "keyword": keyword,
+            "caption": "\n".join(line for line in lines if line is not None),
+        }, "", [])
+        # 校验会补足到 3 个分类，这里只保留资料里真实存在的表
+        validated["categories"] = categories
+        plans.append(validated)
+    return plans
+
+
 def fallback_plans(sheets: list[Sheet]) -> list[dict]:
     """模型不可用时的兜底：用规则分类 + 固定文案，保证界面永远有 3 套可选。"""
+    from .pack import PREVIEW_COPY, categorize, is_attendance
+
+    if not is_attendance(sheets):
+        return _data_plans(sheets)
+
     from .pack import PREVIEW_COPY, categorize
 
     categories = [{"name": name, "desc": desc} for name, desc in categorize(sheets)]
