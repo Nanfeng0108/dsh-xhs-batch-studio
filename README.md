@@ -6,7 +6,7 @@
 
 ```sh
 dsh plugin --profile web add dsh-xhs-batch-studio   # 已发 npm 时
-dsh plugin --profile web add OWNER/dsh-xhs-batch-studio   # 或直接用 GitHub 仓库
+dsh plugin --profile web add Nanfeng0108/dsh-xhs-batch-studio   # 或直接用 GitHub 仓库
 ```
 
 DSH Desktop 里也可以走 **插件 → 添加插件**，填包名 / GitHub 地址 / 本地目录。

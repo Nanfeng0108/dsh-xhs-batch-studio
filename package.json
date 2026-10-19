@@ -44,12 +44,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OWNER/dsh-xhs-batch-studio.git"
+    "url": "git+https://github.com/Nanfeng0108/dsh-xhs-batch-studio.git"
   },
   "bugs": {
-    "url": "https://github.com/OWNER/dsh-xhs-batch-studio/issues"
+    "url": "https://github.com/Nanfeng0108/dsh-xhs-batch-studio/issues"
   },
-  "homepage": "https://github.com/OWNER/dsh-xhs-batch-studio#readme",
+  "homepage": "https://github.com/Nanfeng0108/dsh-xhs-batch-studio#readme",
   "publishConfig": {
     "access": "public"
   }
