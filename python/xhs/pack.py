@@ -210,198 +210,43 @@ def categorize(sheets: list[Sheet]) -> list[tuple[str, str]]:
     return found[:5]
 
 
+
+ATTENDANCE_WORDS = ("出勤", "缺勤", "病假", "事假", "迟到", "早退", "旷工", "考勤")
+
+
+def is_attendance(sheets: list[Sheet]) -> bool:
+    """资料确实是考勤表才走考勤那套现成文案。"""
+    text = " ".join(" ".join(sheet.header) + " " + sheet.title for sheet in sheets)
+    return any(word in text for word in ATTENDANCE_WORDS)
+
+
+def data_previews(sheets: list[Sheet]) -> list[dict]:
+    """没有模型文案时，用资料本身的表头和行数说话，不编造业务。"""
+    previews = []
+    for index in range(3):
+        sheet = sheets[index % len(sheets)]
+        name = (sheet.title or sheet.label).strip()
+        cols = [cell.strip() for cell in sheet.header if cell.strip()][:3]
+        previews.append({
+            "badge": (name or "实际版式")[:8],
+            "note": f"{len(sheets)} 个表" if len(sheets) > 1 else "1 个表",
+            "headline": f"{(name or '这张表')[:12]}\n照着自己改",
+            "bullets": [
+                f"表头：{' / '.join(cols)}" if cols else "表头已经排好，直接改字",
+                f"共 {len(sheet.rows)} 行数据，换成自己的内容",
+            ],
+            "steps": ["复制一份", "改表头", "填数据"],
+            "formula": "公式已经写在格子里，改数据就行" if sheet.formulas else "",
+        })
+    return previews
+
+
 def pick_previews(sheets: list[Sheet]) -> list[Sheet]:
     """保留接口：标准表重绘不依赖具体文件，这里只返回前几个做参考。"""
     return sheets[:3]
 
 
 # ---------------------------------------------------------------- 表格预览图（按资料特征重绘）
-CANON_CSS = """
-*{margin:0;padding:0;box-sizing:border-box}
-body{width:1260px;background:var(--card);padding:26px 28px 24px;font-family:"Songti SC","STSong","PingFang SC",serif;color:#111}
-.head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-.title{font-size:36px;font-weight:600;letter-spacing:.08em}
-.badge{font-family:var(--font);font-size:16px;color:#137333;background:#E6F4EA;border:1px solid #A8D5B5;
- border-radius:999px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px}
-.badge i{width:7px;height:7px;border-radius:50%;background:#1F9D55;display:inline-block}
-table{border-collapse:collapse;width:100%;table-layout:fixed}
-th,td{border:1px solid #8e99a3;font-size:23px;line-height:1.3;padding:0 3px;text-align:center;
- white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:54px}
-thead th{background:#2F75B5;color:#fff;font-weight:600;font-size:20px;border-color:#2F75B5}
-thead tr.week th{background:#5B9BD5;font-size:19px;height:40px}
-th.weekend{background:#3E6E9E}
-td{background:var(--card)}
-td.weekend{background:#F3F6FA}
-td.name{background:#eef3f8;font-weight:600;text-align:center}
-td.ok{color:#137333;font-weight:700}
-td.no{color:#C5221F;font-weight:700}
-td.leave{color:#B06000;font-weight:700}
-td.rest{color:#9AA0A6}
-td.stat{background:#EAF1FB;font-weight:700;color:#12395F}
-td.stat.bad{background:#FCE8E6;color:#A50E0E}
-td.stat.warn{background:#FEF3E2;color:#8A5300}
-tfoot td{background:#E8EEF6;font-weight:700;color:#12395F;font-size:21px;height:50px}
-.tabs{display:flex;gap:2px;margin-top:10px;border-bottom:2px solid #2F75B5;padding-left:2px}
-.tabs span{font-family:var(--font);font-size:17px;color:#44505c;background:#eceff3;border:1px solid #d4dae0;
- border-bottom:0;border-radius:6px 6px 0 0;padding:7px 18px}
-.tabs span.active{background:var(--card);color:#1a5a96;font-weight:600;border-color:#2F75B5;box-shadow:inset 0 3px 0 #2F75B5}
-.tabs span.gap{background:transparent;border:0;color:#8a949e;padding:7px 6px}
-"""
-NAME_POOL = ["张伟", "李娜", "王芳", "刘洋", "陈静", "杨磊", "赵敏", "黄强", "周洁", "吴涛"]
-
-
-def pack_features(sheets: list[Sheet]) -> set[str]:
-    features: set[str] = set()
-    for sheet in sheets:
-        features |= sheet.features
-        text = " ".join(sheet.header) + " " + " ".join(" ".join(row) for row in sheet.grid[:6])
-        for word in ("部门", "出勤", "缺勤", "病假", "事假", "早退", "迟到", "旷工", "加班", "年假", "调休", "班次"):
-            if word in text:
-                features.add(word)
-    return features
-
-
-def canonical_table(kind: str, features: set[str], title: str, variant: int = 0) -> str:
-    """按 kind 画一张标准考勤表：固定版式 + 颜色标注 + 多 sheet 标签。"""
-    days = 12 if kind != "word" else 15
-    weekdays = [["四", "五", "六", "日", "一", "二", "三"][i % 7] for i in range(days)]
-    if kind == "auto":
-        summary = ["出勤", "病假", "事假", "迟到", "合计"]
-    elif kind == "dept":
-        summary = ["出勤", "缺勤", "病假", "迟到", "合计"]
-    else:
-        summary = ["出勤", "签字"]
-    lead = ["部门", "姓名"] if kind == "dept" else (["序号", "姓名"] if kind == "word" else ["姓名"])
-
-    lead_w = 11 if len(lead) == 2 else 12
-    sum_w = 7.6
-    day_w = (100 - lead_w * len(lead) - sum_w * len(summary)) / days
-    widths = [f"{lead_w}%"] * len(lead) + [f"{day_w:.2f}%"] * days + [f"{sum_w}%"] * len(summary)
-    colgroup = "".join(f'<col style="width:{width}">' for width in widths)
-
-    head_week = "<tr class='week'>" + "".join(f"<th rowspan='2' class='name'>{name}</th>" for name in lead)
-    head_week += "".join(
-        f"<th class='{'weekend' if day in ('六', '日') else ''}'>{day}</th>" for day in weekdays
-    )
-    head_week += "".join(f"<th rowspan='2'>{name}</th>" for name in summary) + "</tr>"
-    head_day = "<tr>" + "".join(
-        f"<th class='{'weekend' if weekdays[index] in ('六', '日') else ''}'>{index + 1}</th>"
-        for index in range(days)
-    ) + "</tr>"
-
-    name_offset = variant % len(NAME_POOL)
-    names = NAME_POOL[name_offset:] + NAME_POOL[:name_offset]
-    dept_names = ["行政部", "人事部", "财务部"]
-    dept_offset = variant % len(dept_names)
-    depts = dept_names[dept_offset:] + dept_names[:dept_offset]
-
-    rows = []
-    totals: list[int | None] = [0] * len(summary)
-    for row_index in range(10):
-        cells = []
-        if kind == "dept":
-            cells.append(f"<td class='name'>{depts[row_index % len(depts)]}</td>")
-            cells.append(f"<td class='name'>{names[row_index % len(names)]}</td>")
-        elif kind == "word":
-            cells.append(f"<td class='name'>{row_index + 1}</td>")
-            cells.append(f"<td class='name'>{names[row_index % len(names)]}</td>")
-        else:
-            cells.append(f"<td class='name'>{names[row_index % len(names)]}</td>")
-        present = leave = absent = late = 0
-        for day in range(days):
-            weekend = weekdays[day] in ("六", "日")
-            if weekend:
-                mark, cls = "○", "rest"
-            elif (row_index + day) % 9 == 0:
-                mark, cls, absent = "×", "no", absent + 1
-            elif (row_index + day) % 11 == 0:
-                mark, cls, leave = "△", "leave", leave + 1
-            else:
-                mark, cls, present = "√", "ok", present + 1
-            cells.append(f"<td class='{cls}{' weekend' if weekend else ''}'>{mark}</td>")
-        total = present + leave + absent
-        if kind == "auto":
-            stats = [(present, "stat"), (leave, "stat warn"), ((row_index % 2), "stat warn"),
-                     ((row_index % 2), "stat bad"), (total, "stat")]
-        elif kind == "dept":
-            stats = [(present, "stat"), (absent, "stat bad"), (leave, "stat warn"),
-                     ((row_index % 2), "stat bad"), (total, "stat")]
-        else:
-            stats = [(present, "stat"), (-1, "stat")]
-        for index, (value, cls) in enumerate(stats):
-            if value == -1:
-                totals[index] = None
-                cells.append("<td class='stat'></td>")
-            else:
-                if totals[index] is not None:
-                    totals[index] += value
-                cells.append(f"<td class='{cls}'>{value}</td>")
-        rows.append("<tr>" + "".join(cells) + "</tr>")
-
-    foot_cells = ["<td></td>"] * len(lead)
-    foot_cells += [f"<td class='name' cols='{days}'></td>" if False else "" for _ in range(0)]
-    foot_row = "<tr>" + "<td colspan='" + str(len(lead)) + "'>部门合计</td>"
-    foot_row += "".join("<td></td>" for _ in range(days))
-    foot_row += "".join("<td></td>" if value is None else f"<td>{value}</td>" for value in totals) + "</tr>"
-
-    tabs = "".join(
-        f"<span class='{'active' if index == 6 else ''}'>{index + 1}月</span>" for index in range(12)
-    )
-    tabs += "<span class='gap'>…</span><span>使用说明</span>"
-
-    return f"""<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'><style>{CANON_CSS}</style></head>
-<body>
-<div class="head"><div class="title">{title}</div><div class="badge"><i></i>自动统计</div></div>
-<table><colgroup>{colgroup}</colgroup>
-<thead>{head_week}{head_day}</thead>
-<tbody>{''.join(rows)}</tbody>
-<tfoot>{foot_row}</tfoot></table>
-<div class="tabs">{tabs}</div>
-</body></html>"""
-
-
-def render_canonical(browser, kind: str, features: set[str], title: str, out_path: Path, variant: int = 0) -> Path:
-    html = canonical_table(kind, features, title, variant)
-    tmp = out_path.with_suffix(".html")
-    tmp.write_text(html, encoding="utf-8")
-    page = browser.new_page(viewport={"width": 1240, "height": 820}, device_scale_factor=1)
-    page.goto(tmp.as_uri(), wait_until="load")
-    page.wait_for_timeout(80)
-    bottom = page.evaluate("() => { const t = document.querySelector('.tabs') || document.querySelector('table'); return t ? t.getBoundingClientRect().bottom + 26 : document.body.scrollHeight }")
-    page.set_viewport_size({"width": 1240, "height": max(320, min(1200, int(bottom)))})
-    page.wait_for_timeout(60)
-    page.screenshot(path=str(out_path), full_page=False)
-    page.close()
-    tmp.unlink(missing_ok=True)
-    return out_path
-
-
-# ---------------------------------------------------------------- 页面
-BASE = f"""
-*{{margin:0;padding:0;box-sizing:border-box}}
-html{{font-size:16px}}
-body{{width:{W}px;height:{H}px;overflow:hidden;background:var(--bg);color:var(--ink);
- font-family:var(--font);-webkit-font-smoothing:antialiased}}
-.page{{position:relative;width:100%;height:100%;display:flex;flex-direction:column;padding:1.5rem 2rem 1.3rem;overflow:hidden}}
-.topbar{{position:absolute;top:0;left:0;right:0;height:.42rem;background:var(--accent)}}
-.kicker{{align-self:flex-start;background:var(--accent);color:var(--on-accent);font-size:.7rem;font-weight:700;
- padding:.34rem .6rem;border-radius:.4rem;position:relative;z-index:2}}
-.mark{{background:linear-gradient(transparent 54%,var(--accent-soft) 54%,var(--accent-soft) 92%,transparent 92%)}}
-.title{{position:relative;z-index:2;font-weight:900;letter-spacing:-.035em;line-height:1.22;text-wrap:balance}}
-.foot{{margin-top:auto;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);
- padding-top:.62rem;font-size:.72rem;position:relative;z-index:2}}
-.foot b{{color:var(--accent)}}
-.foot span{{color:var(--muted);font-size:.64rem}}
-.sticker{{font-size:.7rem;font-weight:700;padding:.38rem .64rem;border-radius:.45rem;
- box-shadow:0 6px 14px rgba(80,40,20,.10);display:inline-block}}
-.how{{margin-top:1.1rem;display:flex;border:1px solid var(--line);border-radius:.55rem;overflow:hidden;background:var(--card)}}
-.how div{{flex:1;padding:.7rem .55rem;border-right:1px solid var(--line)}}
-.how div:last-child{{border-right:0}}
-.how b{{display:block;font-size:.66rem;color:var(--accent);margin-bottom:.22rem}}
-.how span{{font-size:.7rem;line-height:1.5;color:var(--ink)}}
-"""
-
-
 def token_css(cfg: dict) -> str:
     """每篇按标题哈希取主色与封面变体，保证同一篇可复现、批内不撞脸。"""
     seed = note_seed({"title": cfg.get("title", "")})
@@ -425,6 +270,29 @@ def token_css(cfg: dict) -> str:
     faces = font_css().removeprefix("<style>").removesuffix("</style>")
     return f"{root}\n{faces}\nbody{{--variant:{variant}}}"
 
+BASE = f"""
+*{{margin:0;padding:0;box-sizing:border-box}}
+html{{font-size:16px}}
+body{{width:{W}px;height:{H}px;overflow:hidden;background:var(--bg);color:var(--ink);
+ font-family:var(--font);-webkit-font-smoothing:antialiased}}
+.page{{position:relative;width:100%;height:100%;display:flex;flex-direction:column;padding:1.5rem 2rem 1.3rem;overflow:hidden}}
+.topbar{{position:absolute;top:0;left:0;right:0;height:.42rem;background:var(--accent)}}
+.kicker{{align-self:flex-start;background:var(--accent);color:var(--on-accent);font-size:.7rem;font-weight:700;
+ padding:.34rem .6rem;border-radius:.4rem;position:relative;z-index:2}}
+.mark{{background:linear-gradient(transparent 54%,var(--accent-soft) 54%,var(--accent-soft) 92%,transparent 92%)}}
+.title{{position:relative;z-index:2;font-weight:900;letter-spacing:-.035em;line-height:1.22;text-wrap:balance}}
+.foot{{margin-top:auto;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);
+ padding-top:.62rem;font-size:.72rem;position:relative;z-index:2}}
+.foot b{{color:var(--accent)}}
+.foot span{{color:var(--muted);font-size:.64rem}}
+.sticker{{font-size:.7rem;font-weight:700;padding:.38rem .64rem;border-radius:.45rem;
+ box-shadow:0 6px 14px rgba(80,40,20,.10);display:inline-block}}
+.how{{margin-top:1.1rem;display:flex;border:1px solid var(--line);border-radius:.55rem;overflow:hidden;background:var(--card)}}
+.how div{{flex:1;padding:.7rem .55rem;border-right:1px solid var(--line)}}
+.how div:last-child{{border-right:0}}
+.how b{{display:block;font-size:.66rem;color:var(--accent);margin-bottom:.22rem}}
+.how span{{font-size:.7rem;line-height:1.5;color:var(--ink)}}
+"""
 COVER_CSS = BASE + """
 .ring{position:absolute;right:-5.5rem;top:-3.5rem;width:21rem;height:21rem;border-radius:50%;
  background:var(--accent-soft);opacity:.5;z-index:0}
@@ -496,6 +364,11 @@ CLAIM_CSS = BASE + """
 
 def build_config(sheets: list[Sheet], title: str, audience: str, keyword: str) -> dict:
     categories = categorize(sheets)
+    if not is_attendance(sheets):
+        categories = [
+            (sheet.title or sheet.label, f"{len(sheet.rows)} 行 · {len(sheet.header)} 列")
+            for sheet in sheets[:5]
+        ] or categories
     previews = pick_previews(sheets)
     return {
         "title": title,
@@ -555,6 +428,12 @@ def cover_html(cfg: dict, shot: str) -> str:
 
 
 def catalog_html(cfg: dict) -> str:
+    names = [item["name"] for item in cfg.get("categories", [])]
+    tip_line = (
+        "<b>不知道怎么选</b>：先用第二个「部门 / 员工月度」，最通用。"
+        if len(names) > 1 and is_attendance(cfg.get("sheets") or [])
+        else "<b>不知道怎么选</b>：直接用第一张，改表头和数据就能用。"
+    )
     rows = "".join(
         f'<div class="row"><span class="no">{index:02d}</span><div class="mid"><b>{item["name"]}</b>'
         f'<i>{item["desc"]}</i></div></div>'
@@ -570,7 +449,7 @@ def catalog_html(cfg: dict) -> str:
     <span class="sticker" style="background:var(--accent-soft);transform:rotate(-2deg)">不用从空白表画起</span>
     <span class="sticker" style="background:var(--card);border:1px solid var(--line)">源文件都在</span>
   </div>
-  <div class="tip"><b>不知道怎么选</b>：先用第二个「部门 / 员工月度」，最通用。</div>
+  <div class="tip">{tip_line}</div>
   <div class="foot"><span>全部可编辑</span><span>2 / 6</span></div>
 </div></body></html>"""
 
@@ -599,6 +478,16 @@ def preview_html(index: int, badge: str, note: str, headline: str, sheet_png: st
 
 
 def claim_html(cfg: dict) -> str:
+    edit_line = (
+        "都是源文件，公式和格式保留，改公司名就能用。"
+        if is_attendance(cfg.get("sheets") or [])
+        else "都是源文件，表头和格式保留，改数据就能用。"
+    )
+    labels = [item["name"] for item in cfg.get("categories", [])][:3]
+    next_line = (
+        "<div class='next'><span>包里还有</span>" + "".join(f"<b>{name}</b>" for name in labels) + "</div>"
+        if labels else ""
+    )
     keyword = cfg["keyword"]
     return f"""<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><style>{token_css(cfg)}{CLAIM_CSS}</style></head><body>
 <div class="page"><div class="topbar"></div>
@@ -610,10 +499,10 @@ def claim_html(cfg: dict) -> str:
     <div class="step"><b>3</b><div>先收藏，防止刷走找不到<i>后面还会更同系列的模板</i></div></div>
   </div>
   <div class="quote">资料不收费，也别拿去卖。<br>整理一次很费时间，能帮到同行就行。</div>
-  <div class="next"><span>还会更</span><b>排班表</b><b>入职登记表</b><b>离职交接单</b></div>
+  {next_line}
   <div class="qa">
     <div><b>Q</b> 能打开吗？ <b>A</b> 都是 xls / xlsx / docx，手机电脑都能看。</div>
-    <div><b>Q</b> 能改吗？ <b>A</b> 都是源文件，公式和格式保留，改公司名就能用。</div>
+    <div><b>Q</b> 能改吗？ <b>A</b> {edit_line}</div>
   </div>
   <div class="foot"><span>关注不迷路</span><span>6 / 6</span></div>
 </div></body></html>"""
@@ -671,34 +560,131 @@ def plan_to_cfg(plan: dict, sheets: list[Sheet]) -> dict:
     }
 
 
+
+REAL_CSS = """
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:540px;height:720px;background:#fff;font-family:var(--font);
+ padding:24px 20px 18px;display:flex;flex-direction:column;gap:11px}
+.head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.title{font-size:15.5px;font-weight:700;color:#1B2027;line-height:1.3}
+.badge{flex:none;font-size:9.5px;font-weight:700;color:#0F6B52;background:#E7F3EC;
+ border-radius:999px;padding:3.5px 9px;display:flex;align-items:center;gap:4px}
+.badge i{width:5px;height:5px;border-radius:50%;background:#0F6B52;display:block}
+.tbl{border:1px solid #D8DEE5;border-radius:4px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:8.2px;table-layout:fixed}
+th,td{border-right:1px solid #E3E8EE;border-bottom:1px solid #E3E8EE;padding:3.4px 2px;
+ text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#2C333B}
+th:last-child,td:last-child{border-right:0}
+tr:last-child th,tr:last-child td{border-bottom:0}
+thead th{background:#EEF2F6;font-weight:700;color:#21282F;font-size:8px}
+tbody td:first-child{background:#FAFBFC;font-weight:600;text-align:left;padding-left:6px}
+tbody tr:nth-child(even) td{background:#FCFDFE}
+tbody tr:nth-child(even) td:first-child{background:#F6F8FA}
+.more{font-size:8.4px;color:#7C8794;letter-spacing:.04em}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}
+.tabs span{font-size:8.2px;color:#5D6873;border:1px solid #DCE2E8;border-bottom:0;
+ border-radius:5px 5px 0 0;padding:4.5px 8px;background:#F5F7F9;max-width:112px;
+ overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tabs span.active{background:#fff;color:#1B2027;font-weight:700;border-color:#AEB8C2}
+th.hl{background:color-mix(in srgb,var(--hl) 20%,#fff)!important;color:var(--hl)!important}
+td.hl{background:color-mix(in srgb,var(--hl) 8%,#fff)!important;font-weight:700;color:var(--hl)!important;
+ border-left:1px solid color-mix(in srgb,var(--hl) 45%,#fff)}
+"""
+
+SUM_WORDS = ("合计", "总计", "小计", "汇总", "积分", "得分", "总数", "总额", "总时长")
+
+
+def real_table_html(sheet: Sheet, accent: str = "#C2703B", max_rows: int = 9,
+                    max_cols: int = 12, width: int = 540, height: int = 430) -> str:
+    """把上传资料里的真实表格画出来：表头 + 数据行，不做任何虚构。"""
+    header = [str(cell).strip() for cell in sheet.header[:max_cols]]
+    rows = [[str(cell).strip() for cell in row[:max_cols]] for row in sheet.rows[:max_rows]]
+    cols = max([len(header)] + [len(row) for row in rows] or [0])
+    header += [""] * (cols - len(header))
+    rows = [row + [""] * (cols - len(row)) for row in rows]
+
+    if header and not all(header):
+        header = [f"列{index + 1}" if not name else name for index, name in enumerate(header)]
+
+    hl = [index for index, name in enumerate(header) if any(word in name for word in SUM_WORDS)]
+    if not hl and len(header) > 2:
+        hl = [len(header) - 1]
+
+    def cell_class(index: int) -> str:
+        return " class='hl'" if index in hl else ""
+
+    head = "<tr>" + "".join(f"<th{cell_class(i)}>{name}</th>" for i, name in enumerate(header)) + "</tr>"
+    body = "".join(
+        "<tr>" + "".join(f"<td{cell_class(i)}>{cell}</td>" for i, cell in enumerate(row)) + "</tr>"
+        for row in rows
+    )
+    total_rows = len(sheet.rows)
+    more = (
+        f"<div class='more'>共 {total_rows} 行 · 图上只放前 {len(rows)} 行</div>"
+        if total_rows > len(rows) else ""
+    )
+    title = sheet.title or sheet.label
+    badge = "<div class='badge'><i></i>带公式</div>" if sheet.formulas > 0 else ""
+    tabs = "".join(
+        f"<span class='active'>{name}</span>" for name in [sheet.title or sheet.label]
+    )
+    css = REAL_CSS.replace("width:540px;height:720px", f"width:{width}px;height:{height}px")
+    return f"""<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'><style>:root{{--hl:{accent}}}{css}</style></head>
+<body>
+<div class="head"><div class="title">{title}</div>{badge}</div>
+<div class="tbl"><table><thead>{head}</thead><tbody>{body}</tbody></table></div>
+{more}
+<div class="tabs">{tabs}</div>
+</body></html>"""
+
+
+def accent_of(cfg: dict) -> str:
+    seed = note_seed({"title": cfg.get("title", "")})
+    palette = _config.PALETTES["warm"]
+    accents = palette.get("accents") or [palette["accent"]]
+    return accents[seed % len(accents)]
+
+
+def render_real(browser, sheet: Sheet, out_path: Path, accent: str = "#C2703B",
+                width: int = 540, height: int = 430) -> Path:
+    html = real_table_html(sheet, accent, width=width, height=height)
+    tmp = out_path.with_suffix(".html")
+    tmp.write_text(html, encoding="utf-8")
+    page = browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=2)
+    page.goto(tmp.as_uri(), wait_until="load")
+    page.evaluate("() => document.fonts.ready.then(() => true)")
+    page.wait_for_timeout(90)
+    page.screenshot(path=str(out_path))
+    page.close()
+    tmp.unlink(missing_ok=True)
+    return out_path
+
+
 def render_note(cfg: dict, out_dir: Path, variant: int = 0) -> dict:
     """渲染一套 6 张图 + caption.md；variant 决定月份与人名轮换，让批量出的图不重样。"""
     out_dir.mkdir(parents=True, exist_ok=True)
     sheets: list[Sheet] = cfg["sheets"]
-    features = pack_features(sheets)
-    year = CURRENT_YEAR
-    month = [7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6][variant % 12]
-    titles = [f"{year}年{month}月份考勤表"] * 3
+    if not sheets:
+        raise SystemExit("资料里没有解析出表格，无法出图")
 
     from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
         browser = p.chromium.launch(args=["--font-render-hinting=none", "--allow-file-access-from-files"])
+        accent = accent_of(cfg)
         shots = []
-        for index, kind in enumerate(("auto", "dept", "word")):
+        for index in range(3):
+            sheet = sheets[index % len(sheets)]
             path = out_dir / f"_sheet-{index + 1}.png"
-            render_canonical(browser, kind, features, titles[index], path, variant)
+            render_real(browser, sheet, path, accent)
             shots.append(path.as_uri())
 
         pages = [("01.png", cover_html(cfg, shots[0])), ("02.png", catalog_html(cfg))]
         for index, kind in enumerate(("auto", "dept", "word")):
             copy = cfg["previews"][index]
-            box = None
-            if index == 0:
-                box = {"right": "2.2%", "top": "26.5%", "width": "36%", "height": "52%"}
             pages.append((f"{index + 3:02d}.png", preview_html(
                 index, copy["badge"], copy["note"], copy["headline"], shots[index],
-                copy["bullets"], copy["steps"], box, f"{index + 3} / 6", copy.get("formula", ""),
+                copy["bullets"], copy["steps"], None, f"{index + 3} / 6", copy.get("formula", ""),
                 token_css(cfg))))
         pages.append(("06.png", claim_html(cfg)))
 
@@ -773,14 +759,22 @@ def main(argv: list[str] | None = None) -> int:
         }
     else:
         cfg = build_config(sheets, args.title, args.audience or "打工人", args.keyword)
-        cfg["sub"] = args.sub or "每个月新建表、调格式、补公式\n现成的版式，改个名字就能用"
+        if args.sub:
+            cfg["sub"] = args.sub
+        elif is_attendance(sheets):
+            cfg["sub"] = "每个月新建表、调格式、补公式\n现成的版式，改个名字就能用"
+        else:
+            cfg["sub"] = "表头和数据都在\n改成自己的就能用"
         cfg["highlight"] = args.highlight or ""
         cfg["stickers"] = ["自动汇总", "可直接打印"]
-        cfg["previews"] = [
-            dict(PREVIEW_COPY["auto"], formula='=COUNTIF(C4:N4,"√")  ← 出勤天数，月底自动汇总'),
-            dict(PREVIEW_COPY["dept"], formula='=SUMIF(部门列,"行政部",出勤列)  ← 按部门汇总'),
-            dict(PREVIEW_COPY["word"], formula=""),
-        ]
+        if is_attendance(sheets):
+            cfg["previews"] = [
+                dict(PREVIEW_COPY["auto"], formula='=COUNTIF(C4:N4,"√")  ← 出勤天数，月底自动汇总'),
+                dict(PREVIEW_COPY["dept"], formula='=SUMIF(部门列,"行政部",出勤列)  ← 按部门汇总'),
+                dict(PREVIEW_COPY["word"], formula=""),
+            ]
+        else:
+            cfg["previews"] = data_previews(sheets)
     render(cfg, out_dir)
     print("完成：", out_dir)
     return 0
