@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{--font:{{FONT_STACK}};--bg:{{BG}};--ink:{{INK}};--muted:{{MUTED}};--accent:{{ACCENT}};--accent-soft:{{ACCENT_SOFT}};--line:{{LINE}};--on-accent:{{ON_ACCENT}};--surface:{{SURFACE}}}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{width:{{WIDTH}}px;height:{{HEIGHT}}px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .card{position:relative;width:100%;height:100%;padding:2.5rem 2.4rem 2rem;display:flex;flex-direction:column;overflow:hidden}
+  .grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.045;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .glow{position:absolute;width:14rem;height:14rem;border-radius:50%;right:-5rem;top:-5.5rem;background:var(--accent-soft);opacity:.7;filter:blur(30px)}
+  .head{display:flex;align-items:center;gap:.7rem;margin-bottom:1.35rem;position:relative;z-index:2}
+  .no{width:2.2rem;height:2.2rem;border-radius:50%;background:var(--accent);color:var(--on-accent);display:grid;place-items:center;font-size:.88rem;font-weight:700}
+  .label{font-size:.7rem;letter-spacing:.26em;color:var(--muted);font-weight:600}
+  .stamp{margin-left:auto;font-size:.66rem;letter-spacing:.14em;color:var(--muted);opacity:.75}
+  .body{flex:1;position:relative;z-index:2;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
+  .inner{width:100%}
+  .title{font-size:2rem;line-height:1.3;font-weight:800;letter-spacing:-.01em;margin-bottom:1.05rem}
+  .title .em{box-shadow:inset 0 -.55rem 0 var(--accent-soft)}
+  .lines{display:flex;flex-direction:column;gap:.72rem}
+  .line{display:flex;gap:.7rem;font-size:1.1rem;line-height:1.7}
+  .dot{flex:none;width:.32rem;height:.32rem;border-radius:50%;background:var(--accent);margin-top:.72rem}
+  .line .tx{flex:1}
+  .hl{color:var(--accent);font-weight:700;box-shadow:inset 0 -.4rem 0 var(--accent-soft)}
+  .foot{margin-top:auto;padding-top:.95rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;
+    align-items:center;font-size:.66rem;color:var(--muted);letter-spacing:.12em;position:relative;z-index:2}
+  .wm{position:absolute;right:1rem;bottom:3rem;font-size:7rem;font-weight:800;color:var(--ink);opacity:.04;line-height:1;z-index:1}
+  .ico{flex:none;width:1.28rem;height:1.28rem;display:grid;place-items:center;color:var(--accent);margin-top:.28rem}
+  .ico .ico-svg{width:100%;height:100%;display:block}
+  /* 变体 b：标题带左侧色条、破折号列表，和编号圆点版拉开距离 */
+  .v-b .card{padding:2.7rem 2.3rem 2rem}
+  .v-b .body{justify-content:flex-start;padding-top:1.4rem}
+  .v-b .title{font-size:2.42rem;line-height:1.24;margin-bottom:1.7rem;padding-left:.85rem;border-left:.26rem solid var(--accent)}
+  .v-b .lines{gap:1.05rem}
+  .v-b .line{font-size:1.08rem;line-height:1.62;gap:.8rem}
+  .v-b .dot,.v-b .ico{display:none}
+  .v-b .line::before{content:"";flex:none;width:1.1rem;height:1px;background:var(--accent);margin-top:.82rem}
+  .v-b .wm{bottom:auto;top:34%;font-size:5.4rem;opacity:.045;right:1.2rem}
+</style>
+</head>
+<body class="v-{{CARD_VARIANT}}">
+  <div class="card grain">
+    <div class="glow"></div>
+    <div class="head">
+      <div class="no">{{NO}}</div>
+      <div class="label">{{LABEL}}</div>
+      <div class="stamp">{{STAMP}}</div>
+    </div>
+    <div class="body" id="fitbox">
+      <div class="inner" id="inner">
+        <div class="title">{{TITLE}}</div>
+        <div class="lines">{{LINES}}</div>
+      </div>
+    </div>
+    <div class="wm">{{NO}}</div>
+    <div class="foot"><span>{{SIGNATURE_BLOCK}}</span><span>{{PAGE}}</span></div>
+  </div>
+<script>
+  (function fit() {
+    const box = document.getElementById('fitbox'), inner = document.getElementById('inner')
+    if (!box || !inner) return
+    const root = document.documentElement
+    const set = (v) => { root.style.fontSize = v + 'px' }
+    let size = 16, guard = 0
+    set(size)
+    while (inner.scrollHeight > box.clientHeight + 1 && size > 11 && guard++ < 40) { size -= 0.5; set(size) }
+    guard = 0
+    while (inner.scrollHeight < box.clientHeight * 0.9 && size < 22 && guard++ < 40) {
+      const prev = size
+      size += 0.5; set(size)
+      if (inner.scrollHeight > box.clientHeight) { size = prev; set(size); break }
+    }
+  })()
+</script>
+</body>
+</html>

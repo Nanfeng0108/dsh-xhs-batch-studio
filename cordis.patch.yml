@@ -1,0 +1,4 @@
+- insert:
+    - id: xhs-batch-studio
+      name: dsh-xhs-batch-studio
+      config: {}

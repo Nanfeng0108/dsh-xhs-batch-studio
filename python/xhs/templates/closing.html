@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{--font:{{FONT_STACK}};--bg:{{BG}};--ink:{{INK}};--muted:{{MUTED}};--accent:{{ACCENT}};--accent-soft:{{ACCENT_SOFT}};--line:{{LINE}};--on-accent:{{ON_ACCENT}};--surface:{{SURFACE}}}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{width:{{WIDTH}}px;height:{{HEIGHT}}px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .page{position:relative;width:100%;height:100%;padding:3rem 2.6rem 2rem;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+  .halo{position:absolute;width:24rem;height:24rem;border-radius:50%;background:var(--accent-soft);opacity:.6;left:-9rem;top:-7rem}
+  .ring{position:absolute;width:10rem;height:10rem;border-radius:50%;border:2px solid var(--accent);opacity:.18;left:3rem;top:4rem}
+  .badge{align-self:flex-start;position:relative;z-index:2;background:var(--accent);color:var(--on-accent);
+    font-size:.76rem;font-weight:700;letter-spacing:.16em;padding:.42rem .9rem;border-radius:999px}
+  .body{position:relative;z-index:2;margin-top:1.8rem;padding-bottom:2.6rem}
+  .cta{font-size:2.06rem;line-height:1.5;font-weight:900;letter-spacing:-.01em;max-width:24rem}
+  .cta .hl{box-shadow:inset 0 -.55rem 0 var(--accent-soft)}
+  .tags{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.8rem;max-width:26rem}
+  .tag{font-size:.76rem;letter-spacing:.02em;padding:.36rem .7rem;border-radius:999px;
+    border:1px solid var(--line);background:var(--surface);color:var(--accent)}
+  .foot{position:absolute;left:2.6rem;right:2.6rem;bottom:1.9rem;display:flex;justify-content:space-between;align-items:center;
+    font-size:.7rem;letter-spacing:.14em;color:var(--muted);z-index:2}
+  .save{display:flex;align-items:center;gap:.5rem}
+  .save i{width:.62rem;height:.62rem;background:var(--accent);display:block;border-radius:1px;transform:rotate(45deg);font-style:normal}
+</style>
+</head>
+<body class="v-{{VARIANT}}">
+  <div class="page">
+    <div class="halo"></div>
+    <div class="ring"></div>
+    <div class="badge">看到这里</div>
+    <div class="body">
+      <div class="cta">{{CTA}}</div>
+      <div class="tags">{{TAGS}}</div>
+    </div>
+    <div class="foot">
+      <span class="save"><i></i>收藏慢慢看</span>
+      <span>{{SIGNATURE_BLOCK}}　{{PAGE}}</span>
+    </div>
+  </div>
+</body>
+</html>

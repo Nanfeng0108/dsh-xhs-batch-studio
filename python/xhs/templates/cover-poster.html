@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{--font:{{FONT_STACK}};--bg:{{BG}};--ink:{{INK}};--muted:{{MUTED}};--accent:{{ACCENT}};--accent-soft:{{ACCENT_SOFT}};--line:{{LINE}};--on-accent:{{ON_ACCENT}};--surface:{{SURFACE}}}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{width:{{WIDTH}}px;height:{{HEIGHT}}px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .cover{position:relative;width:100%;height:100%;padding:2.4rem 2.3rem;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+  .topbar{position:absolute;top:0;left:0;right:0;height:.42rem;background:var(--accent)}
+  .arc{position:absolute;width:23rem;height:23rem;border-radius:50%;right:-8rem;top:8.5rem;background:var(--accent-soft);opacity:.8}
+  .arc2{position:absolute;width:9.5rem;height:9.5rem;border-radius:50%;right:3.4rem;top:19rem;border:2px solid var(--accent);opacity:.28}
+  .grain::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .kicker{position:relative;z-index:2;align-self:flex-start;background:var(--accent);color:var(--on-accent);font-size:.78rem;
+    font-weight:700;letter-spacing:.14em;padding:.42rem .85rem;border-radius:999px}
+  .body{position:relative;z-index:2;margin-top:0;padding-bottom:3.4rem;max-width:27rem}
+  .meta{display:inline-flex;align-items:center;gap:.5rem;margin-top:1.6rem;padding:.5rem .8rem;border-radius:999px;
+    border:1px solid var(--line);background:var(--surface);font-size:.76rem;letter-spacing:.06em;color:var(--muted)}
+  .meta b{color:var(--accent);font-weight:700}
+  .rule{width:2.8rem;height:.24rem;background:var(--accent);border-radius:99px;margin-bottom:1.1rem}
+  .title{font-size:4.35rem;line-height:1.06;font-weight:900;letter-spacing:-.035em;white-space:pre-line}
+  .title .em{box-shadow:inset 0 -.9rem 0 var(--accent-soft)}
+  .sub{margin-top:1.05rem;font-size:1.06rem;line-height:1.55;color:var(--muted);max-width:21rem}
+  .foot{position:absolute;left:2.3rem;right:2.3rem;bottom:1.7rem;display:flex;justify-content:space-between;align-items:center;
+    font-size:.7rem;letter-spacing:.14em;color:var(--muted);z-index:2}
+  .wm{position:absolute;top:2.1rem;right:2rem;font-size:4.4rem;font-weight:900;line-height:1;color:var(--ink);opacity:.07;z-index:1;letter-spacing:-.04em}
+
+  /* 变体 b：居中构图，装饰镜像到左下 */
+  .v-b .cover{justify-content:center;align-items:center;text-align:center}
+  .v-b .kicker{align-self:center}
+  .v-b .body{display:flex;flex-direction:column;align-items:center;padding-bottom:0;max-width:25rem}
+  .v-b .rule{margin:0 auto 1.1rem}
+  .v-b .title{font-size:3.85rem;text-wrap:balance}
+  .v-b .sub{margin-left:auto;margin-right:auto}
+  .v-b .arc{right:auto;left:-7rem;top:auto;bottom:-5rem;width:20rem;height:20rem}
+  .v-b .arc2{right:auto;left:2.6rem;top:auto;bottom:4.2rem}
+  .v-b .wm{top:auto;bottom:4.6rem;right:2rem;font-size:3.2rem;opacity:.05}
+</style>
+</head>
+<body class="v-{{VARIANT}}">
+  <div class="cover grain">
+    <div class="topbar"></div>
+    <div class="arc"></div>
+    <div class="arc2"></div>
+    <div class="kicker">{{KICKER}}</div>
+    <div class="body">
+      <div class="rule"></div>
+      <div class="title" id="title">{{TITLE}}</div>
+      <div class="sub">{{SUBTITLE}}</div>
+      <div class="meta">{{COVER_META}}</div>
+    </div>
+    <div class="wm">01</div>
+    <div class="foot">
+      <span>{{SIGNATURE_BLOCK}}</span>
+      <span>左滑看全部 ▸</span>
+    </div>
+  </div>
+<script>
+  (function fit() {
+    const el = document.getElementById('title')
+    if (!el) return
+    const box = el.parentElement
+    let size = parseFloat(getComputedStyle(el).fontSize)
+    let guard = 0
+    while (el.scrollHeight + 120 > box.clientHeight + 200 && size > 22 && guard++ < 40) {
+      size -= 1.5
+      el.style.fontSize = size + 'px'
+    }
+  })()
+</script>
+</body>
+</html>

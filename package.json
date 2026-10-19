@@ -1,0 +1,56 @@
+{
+  "name": "dsh-xhs-batch-studio",
+  "version": "3.6.6",
+  "description": "把资料（Excel / PDF / Word）批量变成小红书图文：提炼选题、写文案、按模板出封面与内页图、导出索引表。DSH 工作台插件。",
+  "license": "MIT",
+  "author": "local",
+  "type": "module",
+  "main": "./dsh/index.js",
+  "exports": {
+    ".": "./dsh/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "cordis.patch.yml",
+    "dsh",
+    "lib",
+    "python",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "dsh-desktop-workbenches"
+      ]
+    }
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "xiaohongshu",
+    "xhs",
+    "workbench",
+    "playwright",
+    "content"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/dsh-xhs-batch-studio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OWNER/dsh-xhs-batch-studio/issues"
+  },
+  "homepage": "https://github.com/OWNER/dsh-xhs-batch-studio#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

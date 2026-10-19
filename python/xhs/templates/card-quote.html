@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{--font:{{FONT_STACK}};--bg:{{BG}};--ink:{{INK}};--muted:{{MUTED}};--accent:{{ACCENT}};--accent-soft:{{ACCENT_SOFT}};--line:{{LINE}};--on-accent:{{ON_ACCENT}};--surface:{{SURFACE}}}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{width:{{WIDTH}}px;height:{{HEIGHT}}px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .page{position:relative;width:100%;height:100%;padding:3.4rem 2.6rem 2.2rem;display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+  .halo{position:absolute;width:17rem;height:17rem;border-radius:50%;border:1.5px solid var(--accent);opacity:.14;right:-6rem;top:-4.5rem}
+  .mark{position:relative;z-index:2;font-size:8rem;line-height:.6;color:var(--accent);font-weight:800;letter-spacing:-.02em}
+  .quote{position:relative;z-index:2;margin-top:1.4rem;font-size:2.42rem;line-height:1.55;font-weight:700;letter-spacing:-.01em}
+  .quote .hl{box-shadow:inset 0 -.52rem 0 var(--accent-soft)}
+  .from{position:relative;z-index:2;margin-top:2.6rem;display:flex;align-items:center;gap:.75rem;font-size:.8rem;letter-spacing:.1em;color:var(--muted)}
+  .from::before{content:"";width:2.2rem;height:1px;background:var(--accent);flex:none}
+  .foot{position:absolute;left:2.6rem;right:2.6rem;bottom:1.9rem;display:flex;justify-content:space-between;align-items:center;
+    font-size:.7rem;letter-spacing:.14em;color:var(--muted);z-index:2}
+</style>
+</head>
+<body class="v-{{CARD_VARIANT}}">
+  <div class="page">
+    <div class="halo"></div>
+    <div class="mark">“</div>
+    <div class="quote">{{QUOTE}}</div>
+    <div class="from">{{FROM}}</div>
+    <div class="foot"><span>{{SIGNATURE_BLOCK}}</span><span>{{PAGE}}</span></div>
+  </div>
+</body>
+</html>

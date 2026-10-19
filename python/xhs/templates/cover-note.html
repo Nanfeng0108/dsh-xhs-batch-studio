@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  :root{--font:{{FONT_STACK}};--bg:{{BG}};--ink:{{INK}};--muted:{{MUTED}};--accent:{{ACCENT}};--accent-soft:{{ACCENT_SOFT}};--line:{{LINE}};--on-accent:{{ON_ACCENT}};--surface:{{SURFACE}}}
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{font-size:16px}
+  body{width:{{WIDTH}}px;height:{{HEIGHT}}px;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:var(--font);-webkit-font-smoothing:antialiased}
+  .cover{position:relative;width:100%;height:100%;padding:2.4rem 2.2rem;overflow:hidden}
+  .sheet{position:relative;height:100%;border:2px dashed var(--line);border-radius:6px;padding:2.2rem 2rem;display:flex;flex-direction:column;background:var(--surface)}
+  .tape{position:absolute;top:-.9rem;left:2.6rem;width:6.2rem;height:1.7rem;background:var(--accent-soft);transform:rotate(-2.5deg);opacity:.9;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+  .kicker{font-size:.74rem;letter-spacing:.22em;color:var(--accent);font-weight:700}
+  .body{margin-top:2.6rem}
+  .title{font-size:3.1rem;line-height:1.16;font-weight:800;letter-spacing:-.01em;white-space:pre-line}
+  .title .em{background:linear-gradient(transparent 58%,var(--accent-soft) 58%,var(--accent-soft) 92%,transparent 92%)}
+  .sub{margin-top:1.1rem;font-size:1rem;line-height:1.65;color:var(--muted);max-width:19rem}
+  .points{margin-top:auto;display:flex;flex-direction:column;gap:.55rem;padding-top:1.4rem}
+  .points div{display:flex;gap:.6rem;font-size:.92rem;line-height:1.5;color:var(--muted)}
+  .points i{flex:none;width:1.15rem;height:1.15rem;border-radius:50%;border:1px solid var(--accent);color:var(--accent);
+    font-size:.62rem;font-style:normal;display:grid;place-items:center;margin-top:.16rem}
+  .foot{margin-top:1.2rem;display:flex;justify-content:space-between;align-items:center;font-size:.7rem;letter-spacing:.14em;color:var(--muted)}
+  .no{font-size:2.2rem;font-weight:800;color:var(--accent);opacity:.85;line-height:1}
+
+  /* 变体 b：便签居中，胶带移到正中 */
+  .v-b .tape{left:50%;margin-left:-3.1rem;transform:rotate(1.8deg)}
+  .v-b .body{margin-top:3.2rem;text-align:center}
+  .v-b .sub{margin-left:auto;margin-right:auto}
+  .v-b .foot{justify-content:center;gap:1.4rem}
+  .v-b .points div{justify-content:center}
+</style>
+</head>
+<body class="v-{{VARIANT}}">
+  <div class="cover">
+    <div class="sheet">
+      <div class="tape"></div>
+      <div class="kicker">{{KICKER}}</div>
+      <div class="body">
+        <div class="title" id="title">{{TITLE}}</div>
+        <div class="sub">{{SUBTITLE}}</div>
+      </div>
+      {{COVER_POINTS}}
+      <div class="foot"><span>{{SIGNATURE_BLOCK}}</span><span>{{PAGE_LABEL}}</span></div>
+    </div>
+  </div>
+<script>
+  (function fit() {
+    const el = document.getElementById('title')
+    if (!el) return
+    let size = parseFloat(getComputedStyle(el).fontSize)
+    let guard = 0
+    while (el.getBoundingClientRect().height > {{HEIGHT}} * 0.4 && size > 20 && guard++ < 40) {
+      size -= 1.5
+      el.style.fontSize = size + 'px'
+    }
+  })()
+</script>
+</body>
+</html>
